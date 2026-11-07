@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+ <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+ <title>擴散與滲透 · Ro 生物實驗室 v0.4.1</title>
+ <meta name="description" content="國中七年級教學用擴散與滲透互動實驗室：觀察來源交換、細胞體積與動態平衡，可離線使用。">
+ <link rel="stylesheet" href="styles.css">
+ <script defer src="src/model.js"></script><script defer src="src/particles.js"></script><script defer src="src/presentation.js"></script><script defer src="src/app.js"></script>
+</head>
+<body>
+ <a class="skip-link" href="#observation">跳至細胞觀察</a>
+ <header class="page-header">
+  <div><p class="eyebrow"><span class="eyebrow-line"></span>RO BIOLOGY LAB <span>七年級生物</span></p><h1>擴散與滲透 <small>互動實驗室</small></h1></div>
+  <div class="header-meta"><span class="local-badge"><i></i>可離線使用</span><span class="version">v0.4.1</span></div>
+ </header>
+ <nav class="mobile-nav" aria-label="實驗區塊"><a href="#observation">觀察細胞</a><a href="#settings">調整條件</a><a href="#data">查看數據</a></nav>
+ <main class="layout">
+  <section id="settings" class="panel controls" aria-labelledby="settings-title">
+   <div class="section-heading"><h2 id="settings-title"><span class="step">01</span>設定實驗</h2><span id="lockBadge" class="mini-badge">可調整</span></div>
+   <label for="preset">教學情境</label><select id="preset"><option value="osmosis">02 水的滲透</option></select>
+   <label for="mode">操作模式</label><select id="mode"><option value="basic">基礎實驗</option><option value="explore">自由探索</option></select>
+   <p id="modeHint" class="note">基礎實驗開始後鎖定條件，方便比較單一變因。</p>
+   <details id="initialDetails" class="initial-details" open><summary>初始數量 <span>模型單位</span></summary>
+    <form id="initialForm"><fieldset id="initialFields"><legend class="sr-only">初始數量（模型單位）</legend>
+     <div class="quantity-section"><h3>水量 <span>20–50</span></h3>
+      <div class="quantity"><label for="insideWater"><i class="dot water-in"></i>細胞內</label><input id="insideWater" type="number" min="20" max="50" step="1" value="20" required aria-label="細胞內初始水量"><input id="insideWaterRange" type="range" min="20" max="50" step="1" value="20" aria-label="細胞內水量滑桿"></div>
+      <div class="quantity"><label for="outsideWater"><i class="dot water-out"></i>細胞外</label><input id="outsideWater" type="number" min="20" max="50" step="1" value="40" required aria-label="細胞外初始水量"><input id="outsideWaterRange" type="range" min="20" max="50" step="1" value="40" aria-label="細胞外水量滑桿"></div>
+     </div>
+     <div class="quantity-section"><h3>鹽量 <span>0–50</span></h3>
+      <div class="quantity"><label for="insideSalt"><i class="diamond salt-in"></i>細胞內</label><input id="insideSalt" type="number" min="0" max="50" step="1" value="4" required aria-label="細胞內初始鹽量"><input id="insideSaltRange" type="range" min="0" max="50" step="1" value="4" aria-label="細胞內鹽量滑桿"></div>
+      <div class="quantity"><label for="outsideSalt"><i class="diamond salt-out"></i>細胞外</label><input id="outsideSalt" type="number" min="0" max="50" step="1" value="2" required aria-label="細胞外初始鹽量"><input id="outsideSaltRange" type="range" min="0" max="50" step="1" value="2" aria-label="細胞外鹽量滑桿"></div>
+     </div>
+     <details class="seed-details"><summary>重現相同動畫</summary><label for="seed">動畫隨機種子</label><input id="seed" type="number" min="0" max="4294967295" step="1" value="271828" required></details>
+    </fieldset></form>
+   </details>
+   <fieldset id="membraneFields" class="membrane-fields"><legend>膜通透性</legend>
+    <label class="membrane-toggle"><span><b>水</b><small id="waterPermitLabel">可通過</small></span><input id="waterPermeable" type="checkbox" role="switch" checked><span class="toggle-track" aria-hidden="true"></span></label>
+    <label class="membrane-toggle"><span><b>鹽</b><small id="saltPermitLabel">不可通過</small></span><input id="saltPermeable" type="checkbox" role="switch"><span class="toggle-track" aria-hidden="true"></span></label>
+   </fieldset>
+   <p id="lockNote" class="note lock-note">開始前可調整初始量；本次容器容量由初始水量決定。</p>
+   <button id="newButton" type="button" class="full secondary">建立新實驗</button>
+   <p id="error" class="error" role="alert" tabindex="-1" hidden></p>
+   <section id="explorePanel" class="explore-panel" hidden><h3>人為轉移</h3><p class="note">搬移兩側庫存，保留來源，不計入自然跨膜交換。</p>
+    <form id="transferForm"><div class="transfer-grid"><label for="transferType">物質<select id="transferType"><option value="water">水</option><option value="salt">鹽</option></select></label><label for="transferDirection">方向<select id="transferDirection"><option value="in">外 → 內</option><option value="out">內 → 外</option></select></label></div><label for="transferAmount">轉移量（模型單位）</label><input id="transferAmount" type="number" min="0.1" step="0.1" value="10" required><button id="transferButton" type="submit" class="full">執行人為轉移</button></form>
+    <p id="transferFeedback" class="feedback" role="status" hidden></p>
+   </section>
+  </section>
+  <section id="observation" class="panel view-panel" aria-labelledby="view-title">
+   <div class="section-heading"><h2 id="view-title"><span class="step">02</span>觀察細胞</h2><span id="runState" class="run-state">尚未開始</span></div>
+   <p id="scenarioNote" class="scenario-note"></p>
+   <div class="stats"><div><span>細胞體積 / 初始</span><strong id="volumeValue">100.0%</strong></div><div><span>模擬時間</span><strong id="timeValue">0.00</strong></div></div>
+   <section class="live-amounts-section" aria-label="細胞內外即時數量">
+     <div class="live-heading"><h3>內外即時數量</h3><span>模型單位</span></div>
+     <div class="live-amounts" id="amountReadouts">
+      <div class="amount-card"><span>細胞內水</span><strong id="liveWi">20.00</strong><small id="liveWiChange" data-direction="steady">初始量</small></div>
+      <div class="amount-card"><span>細胞外水</span><strong id="liveWo">40.00</strong><small id="liveWoChange" data-direction="steady">初始量</small></div>
+      <div class="amount-card"><span>細胞內鹽</span><strong id="liveSi">4.00</strong><small id="liveSiChange" data-direction="steady">初始量</small></div>
+      <div class="amount-card"><span>細胞外鹽</span><strong id="liveSo">2.00</strong><small id="liveSoChange" data-direction="steady">初始量</small></div>
+     </div><p class="live-caption">增減為本次更新的淨變化；平衡時仍可雙向交換。</p>
+    </section>
+    <p id="limitBanner" class="limit" role="alert" hidden></p>
+   <div class="simulation-wrap"><canvas id="simulationCanvas" width="720" height="440" role="img" aria-label="封閉容器中的細胞。圓形為水、菱形為鹽；顏色表示原始來源，跨膜後不變。精確量值見數據區。"></canvas></div>
+   <div class="focus-controls" role="group" aria-label="選擇淡化的粒子">
+     <button id="fadeWater" type="button" aria-pressed="false" aria-label="淡化水粒子">水淡化</button>
+     <button id="fadeSalt" type="button" aria-pressed="false" aria-label="淡化鹽粒子">鹽淡化</button>
+     <span id="particleSummary" class="particle-summary"></span>
+    </div>
+    <div class="legend" aria-label="原始來源圖例"><span><i class="dot water-in"></i>內源水</span><span><i class="dot water-out"></i>外源水</span><span><i class="diamond salt-in"></i>內源鹽</span><span><i class="diamond salt-out"></i>外源鹽</span></div>
+   <p id="visualNote" class="visual-note" role="status">顏色記錄原始來源。畫面為代表性粒子，精確量值見數據區。</p>
+   <div id="transportBar" class="transport-bar"><button id="startButton" class="primary" type="button">開始</button><button id="resetButton" type="button" title="回到本次初始條件，保留設定鎖定">重設</button><label class="speed-control" for="speed"><span>速度 <output id="speedValue">2×</output></span><input id="speed" type="range" min="0.5" max="8" step="0.5" value="2"></label></div>
+   <div class="temperature-panel"><label class="speed-control" for="temperature"><span>溫度示意 <output id="temperatureValue">常溫</output></span><input id="temperature" type="range" min="0" max="2" step="1" value="1" aria-describedby="temperatureNote"></label><p id="temperatureNote" class="note">低溫 → 常溫 → 高溫：只調整區室內粒子的示意運動速度，不改數值擴散／滲透速率、通透性或平衡。無攝氏校準；實際溫度效應亦受黏度與膜性質影響。播放倍速則控制整個實驗播放。</p></div>
+    <details class="display-details"><summary>顯示設定</summary><div class="display-options"><label class="check"><input id="showWater" type="checkbox" checked>顯示水</label><label class="check"><input id="showSalt" type="checkbox" checked>顯示鹽</label><label for="density">粒子密度<select id="density"><option value="0.5">少</option><option value="1" selected>中</option><option value="1.5">多</option></select></label></div><p class="note">淡化、顯示與密度只影響畫面，來源色與物質量不變。畫面為代表量，不直接數顆數；改變密度會重新取樣。</p></details>
+  </section>
+  <section id="data" class="panel data-panel" aria-labelledby="data-title">
+   <div class="section-heading"><h2 id="data-title"><span class="step">03</span>數據與趨勢</h2></div>
+   <div id="statusCard" class="status-card"><p class="status-label">系統狀態</p><strong id="systemState" aria-live="polite">尚未開始</strong><p id="explanation"></p><div class="state-line"><span id="waterState">水：尚未開始</span><span id="saltState">鹽：尚未開始</span></div></div>
+   <div class="chart-tabs" role="tablist" aria-label="選擇趨勢圖"><button id="tab-volume" type="button" role="tab" data-chart="volume" aria-controls="chartPanel" aria-selected="true" tabindex="0">細胞體積</button><button id="tab-concentration" type="button" role="tab" data-chart="concentration" aria-controls="chartPanel" aria-selected="false" tabindex="-1">鹽濃度</button><button id="tab-flux" type="button" role="tab" data-chart="flux" aria-controls="chartPanel" aria-selected="false" tabindex="-1">雙向交換</button><button id="tab-origins" type="button" role="tab" data-chart="origins" aria-controls="chartPanel" aria-selected="false" tabindex="-1">來源比例</button></div>
+   <input id="chartKind" type="hidden" value="volume">
+   <div id="chartPanel" role="tabpanel" aria-labelledby="tab-volume"><div class="chart-controls"><label id="speciesOption" for="chartSpecies" hidden>物質<select id="chartSpecies"><option value="water">水</option><option value="salt">鹽</option></select></label><label id="sideOption" for="chartSide" hidden>觀察區室<select id="chartSide"><option value="inside">細胞內</option><option value="outside">細胞外</option></select></label><button id="chartLive" type="button" class="text-button" hidden>回到即時</button></div>
+    <div class="chart-wrap"><canvas id="trendCanvas" width="720" height="280" tabindex="0" role="img" aria-label="趨勢圖" aria-describedby="chartHelp chartLatest"></canvas></div>
+    <div id="chartLegend" class="chart-legend"></div><p id="chartHelp" class="chart-help">點選圖表查看取樣；聚焦後可用 ← → 選擇時間。</p><p id="chartLatest" class="reading"></p>
+   </div>
+   <details id="amountDetails" class="data-details" open><summary>目前庫存 <span>總量守恆</span></summary><div class="table-scroll"><table id="amountTable"><caption class="sr-only">目前庫存與濃度，由運算核心計算</caption><thead><tr><th scope="col">物質</th><th scope="col">細胞內</th><th scope="col">細胞外</th><th scope="col">總量</th></tr></thead><tbody><tr><th scope="row">水量</th><td id="wi"></td><td id="wo"></td><td id="wt"></td></tr><tr><th scope="row">鹽量</th><td id="si"></td><td id="so"></td><td id="st"></td></tr><tr><th scope="row">鹽濃度</th><td id="ci"></td><td id="co"></td><td>—</td></tr></tbody></table></div><p class="note">量為模型單位；鹽濃度 = 鹽量 / 當下水相體積。</p></details>
+   <details class="data-details"><summary>雙向交換與來源比例</summary><div class="table-scroll"><table><caption>自然交換速率（模型量 / 模擬時間）</caption><thead><tr><th>物質</th><th>流入</th><th>流出</th><th>淨流入</th></tr></thead><tbody id="fluxRows"></tbody></table><table><caption>目前區室中的原始來源占比</caption><thead><tr><th>物質與區室</th><th>原本在內</th><th>原本在外</th></tr></thead><tbody id="originRows"></tbody></table></div></details>
+   <details class="data-details"><summary>最近趨勢數值</summary><div class="table-scroll"><table><caption>最近 8 筆，含干預前後；圖表顯示最近 2000 筆</caption><thead><tr><th>時間</th><th>體積 %</th><th>內鹽濃度</th><th>外鹽濃度</th><th>水淨流入</th></tr></thead><tbody id="historyRows"></tbody></table></div></details>
+   <details id="eventDetails" class="data-details"><summary>探索干預紀錄 <span id="eventCount" class="count">0</span></summary><ol id="events"><li>尚無人為干預。</li></ol><p class="note">圖上棕色直立虛線為干預。粒子黑色外框表示人為轉移，與自然跨膜分開記錄。</p></details>
+  </section>
+   <details class="panel model-details"><summary>模型說明與教師資訊</summary>
+    <p>這是有限封閉的雙區室理想模型。每個區室假設充分混合；固定不可通透溶質預設不畫成粒子，其初始濃度內外同為 0.1，之後總量固定、濃度隨體積改變。</p>
+    <p>鹽以單一電中性有效溶質表示，不拆成 Na⁺ 與 Cl⁻。鹽可通時反射係數 σ = 0，鹽不可通時 σ = 1。忽略靜水壓差、膜張力、主動運輸、離子電位、細胞破裂與真實體積調控。</p>
+    <p>水相體積 = 水量 × 1；細胞體積 = 水相體積 + 固定非水體積 20。外水相體積 = 容器容量 − 細胞體積。半徑比 = 體積比的立方根。膜面積比例隨體積比的 2/3 次方變化。</p>
+    <p>鹽淨流入 J<sub>S</sub> = 12 A (C<sub>S,o</sub> − C<sub>S,i</sub>)；水淨流入 J<sub>W</sub> = 30 A [σ(C<sub>S,i</sub> − C<sub>S,o</sub>) + C<sub>B,i</sub> − C<sub>B,o</sub>]。水的雙向量採共同交換底量 5 A，再加各方向的淨流分量；鹽雙向量由各側濃度決定。這些速率為可觀察的教學尺度設定，未校準到真實細胞秒數與分子數。</p>
+    <p>安全範圍為初始細胞體積的 40–180%，且兩側至少保留總水量的 2%（最低 1 單位），取兩條限制中較嚴格者。觸及邊界時停止演算並顯示限制；邊界不等於平衡。初始量範圍含數值壓力測試情境，極高濃度不應解讀為真實稀溶液預測。</p>
+    <p>「接近平衡」須連續 3 個模擬時間窗同時符合通量、驅動力與巨觀穩定門檻；水和鹽分別判斷。接近平衡仍有非零的雙向交換；不可通不等於平衡。</p>
+    <dl id="teacherInfo" class="teacher-grid"></dl>
+    <p class="note">科學模型依據既有設計規格的 Kedem–Katchalsky 稀溶液近似；此版是教學原型。來源與數值方法、校準值及測試證據見專案 docs/ 與 README。</p>
+   </details>
+ </main>
+ <footer><p>理想化教學模型 · 模擬時間與粒子不代表真實秒數或分子數</p><img src="assets/ro-mark.svg" alt="Ro" height="32"></footer>
+</body>
+</html>

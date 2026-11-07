@@ -1,0 +1,16 @@
+{
+  "name": "ro-diffusion-osmosis",
+  "version": "0.4.1",
+  "private": true,
+  "description": "國中擴散與滲透教學模擬器：精簡粒子、獨立淡化與即時數量",
+  "scripts": {
+    "start": "node scripts/serve.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "check": "node scripts/check.cjs",
+    "validate": "node scripts/validate.cjs",
+    "test:browser": "node tests/browser-smoke.cjs",
+    "test:sync": "node tests/browser-sync.cjs",
+    "test:review": "node tests/browser-review.cjs",
+    "test:clarity": "node tests/browser-clarity.cjs"
+  }
+}

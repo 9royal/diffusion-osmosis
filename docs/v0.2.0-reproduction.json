@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "upper-limit",
+      "maximumMarkerError": 5.155298614948164,
+      "targetRadius": 102.76104490965092,
+      "geometryRadius": 102.76104490965092
+    },
+    {
+      "name": "lower-limit",
+      "maximumMarkerError": 0.310778765184196,
+      "targetRadius": 132.5917761024239,
+      "geometryRadius": 132.5917761024239
+    },
+    {
+      "name": "paused-manual-water",
+      "maximumMarkerError": 30,
+      "targetRadius": 148.5593381924845,
+      "geometryRadius": 131.90643087733935
+    }
+  ]
+}

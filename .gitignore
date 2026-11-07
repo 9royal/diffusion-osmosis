@@ -1,0 +1,12 @@
+node_modules/
+qa/
+.env
+.env.*
+!.env.example
+.wrangler/
+*.pem
+*.key
+*.p12
+*.pfx
+.DS_Store
+Thumbs.db
