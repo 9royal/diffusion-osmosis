@@ -1,10 +1,10 @@
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/ro-mark-white.svg"><img src="assets/ro-mark.svg" width="130" alt="Ro"></picture></p>
 
-# 擴散與滲透互動模擬器 v0.4.1
+# 擴散與滲透互動模擬器 v0.4.4
 
 國中生物教學用的有限封閉雙區室互動模型，觀察水滲透、鹽擴散、膜通透性與動態平衡。採原生 HTML、CSS、JavaScript，不需資料庫、登入、金鑰或套件即可操作。
 
-線上入口：https://diffusion-osmosis.dgejh-monster-115.workers.dev/
+線上入口：https://osmo-arj.pages.dev/ 。本存放庫為 v0.4.4；網站目前版本請以線上頁首顯示為準。
 
 ## 安裝與開啟
 1. 下載此存放庫的 ZIP 並解壓縮，保留完整資料夾結構。
@@ -19,6 +19,20 @@
 - 水為圓形、鹽為菱形；四色記錄最初內外來源，跨膜後不變。水淡化與鹽淡化可獨立操作，粒子密度、顯示與淡化不改數值模型。
 - 自由探索可切換膜通透性或人為轉移；物質及來源守恆，人為轉移與自然交換分帳。
 - 四種圖表可按方向鍵或點擊查看歷史。即時庫存始終顯示當前值。
+
+## v0.4.4 觀察時間與穿膜動畫
+- 固定模型播放比例為 0.05，相對 v0.4.1 慢 20 倍；保留 0.5–8× 播放倍速。科學方程、固定步長、守恆和平衡結果不變。
+- 水內／外 50／50、鹽內／外 50／0、僅水可通、常溫、預設 2× 時，預測體積變化的 90% 約需 18.75 秒、95% 約需 21.5 秒。這不是到達平衡的時間，也不保證每種條件都至少 15 秒。
+- 代表粒子穿膜後先在接收側分散，再參與下一次自然交換，減少同一圖示立刻反覆回穿。這是動畫安排，不代表真實分子需要等待或具有移動目的；合理雙向交換與模型帳本不變。
+- 詳細假設、限制與測試見 docs/observation-v0.4.4.md。
+
+## v0.4.3 雙向交換
+- 顯示最近一個模型時間窗的自然流入、流出和淨流入，水／鹽可切換。依核心帳本計算，不以畫面顆數推算，不含人為轉移。
+- 新增「同水量，內鹽較高」情境。兩側都有水雙向交換，內鹽較高時可呈現淨流入。
+- 明示代表粒子、忽略靜水壓與膜張力、可通鹽 σ=0 等教學簡化；水的雙向基線 5A 不是實測單向分子速率。
+
+## v0.4.2 慢看數值趨勢
+- 放慢數值模型播放時間，保留可見的連續隨機動畫；溫度示意與播放倍速分開。
 
 ## v0.4.1 運動與溫度
 粒子改為連續隨機轉向及碰壁反射，畫布按動畫幀更新，減少舊版短步互相抵銷造成的原地抖動觀感。低溫／常溫／高溫為定性示意，只調整區室內運動速度（係數 0.55／1／1.8），不改數值擴散、滲透速率、通透性或平衡。沒有攝氏或實際擴散係數校準；現實溫度效應亦受黏度與膜性質影響。播放倍速則控制整個實驗時間。
@@ -37,9 +51,9 @@
 - assets/：原始 Ro 品牌符號。
 - tests/、scripts/：單元與瀏覽器驗證，輸出到 qa/（不提交）。
 
-執行 node scripts/validate.cjs：49 項自動測試、語法與靜態檢查。選用瀏覽器測試需已有 Playwright；將 PLAYWRIGHT_MODULE 指向該套件，CHROME_PATH 指向 Chrome（若非預設位置），執行 tests/browser-smoke.cjs、browser-sync.cjs、browser-review.cjs、browser-clarity.cjs 與 browser-motion.cjs。本次本機 Chrome 的 43 組瀏覽器流程通過。
+執行 node scripts/validate.cjs：66 項自動測試、語法與靜態檢查。瀏覽器測試需另備 Playwright，並將 PLAYWRIGHT_MODULE 指向該套件；本次驗證使用 Windows 的 Chrome 標準安裝位置。tests/ 中的 browser-smoke、browser-sync、browser-review、browser-clarity、browser-motion、browser-pacing、browser-exchange、browser-observation 共八套回歸均通過，瀏覽器 pageerror 為 0。部分舊測試支援 CHROME_PATH；新版專項仍使用 Windows 標準 Chrome 路徑，其他平台須先調整測試啟動設定。
 
 ## 布建與安全
-此專案不需要秘密或個人設定。公開副本排除本機路徑、部署帳戶識別資訊、參考原稿、私人 QA 記錄及備份；未包含學生資料。若自行發布，只需 index.html、styles.css、src/ 四個 JS 和 assets/ro-mark.svg 共 7 個執行資產，不要直接公開整個專案資料夾。
+此專案不需要秘密或個人設定。公開副本排除本機路徑、部署帳戶識別資訊、參考原稿、私人 QA 記錄及備份；未包含學生資料。若自行發布，只需 index.html、styles.css、src/ 四個 JS 和 assets/ 的兩個 SVG，共 8 個執行資產，不要直接公開整個專案資料夾。
 
 未指定授權條款，本次不附 LICENSE。

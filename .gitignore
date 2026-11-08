@@ -10,3 +10,8 @@ qa/
 *.pfx
 .DS_Store
 Thumbs.db
+
+reference/
+backups/
+test-results/
+*.log

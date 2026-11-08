@@ -8,11 +8,12 @@
  const DEFAULT={...MODEL_DEFAULT,insideWater:20,outsideWater:40,insideSalt:4,outsideSalt:2};
  const presetChanges={diffusion:{insideWater:20,outsideWater:50,insideSalt:4,outsideSalt:6,waterPermeable:false,saltPermeable:true},equilibrium:{insideSalt:2,outsideSalt:4,saltPermeable:true},both:{saltPermeable:true}};
  const PRESETS=Object.fromEntries(Object.entries(MODEL_PRESETS).map(([id,p])=>[id,{...p,config:{...DEFAULT,...presetChanges[id]}}]));
+ PRESETS.equalWater={label:'06 同水量，內鹽較高',description:'兩側水相體積同為 30，內鹽 6、外鹽 2；鹽不可通。比較雙向交換與水的淨流入。',config:{...DEFAULT,insideWater:30,outsideWater:30,insideSalt:6,outsideSalt:2},mode:'basic'};
  let lab=new Laboratory(DEFAULT);
  function visualOptions(){return {temperature:Number($('temperature').value),density:Number($('density').value),targets:{water:Math.min(48,Math.ceil(lab.model.total.water[0]+lab.model.total.water[1])),salt:Math.min(24,Math.ceil(lab.model.total.salt[0]+lab.model.total.salt[1]))}};}
  let view=new ParticleView(lab.model,visualOptions()),speed=2,lastFrame=null,lastRender=0,dirty=true;
  let lastAmounts=null,countChanges={};
- const playback=new Playback(lab,view);
+ const playback=new Playback(lab,view,{modelTimeScale:0.05});
  let chartSelection=null,chartSelectedSample=null,chartGeometry=null,chartSamples=[],visualLag=false;
  const fmt=(n,d=2)=>n===null?'—':(Math.abs(n)<0.5*10**(-d)?0:n).toFixed(d),pct=n=>n===null?'—':(100*n).toFixed(1)+'%';
  const put=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
@@ -38,7 +39,7 @@
  $('speed').addEventListener('input',()=>{speed=Number($('speed').value);$('speedValue').textContent=speed+'×';});
  $('transferForm').addEventListener('submit',e=>{e.preventDefault();attempt(()=>{playback.transfer($('transferType').value,$('transferDirection').value,Number($('transferAmount').value));$('transferFeedback').textContent=eventText(lab.model.events.at(-1))+'。全系統總量不變。';$('transferFeedback').hidden=false;});});
  $('initialForm').addEventListener('submit',e=>e.preventDefault());
- for(const id of ['showWater','showSalt','chartKind','chartSpecies','chartSide'])$(id).addEventListener('change',()=>{dirty=true;render();});
+ for(const id of ['showWater','showSalt','chartKind','chartSpecies','chartSide','exchangeSpecies'])$(id).addEventListener('change',()=>{dirty=true;render();});
  $('density').addEventListener('change',()=>{createView({preservePending:true});dirty=true;render();});
  for(const type of ['Water','Salt'])$('fade'+type).addEventListener('click',()=>{const button=$('fade'+type),faded=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(faded));button.textContent=(type==='Water'?'水':'鹽')+(faded?'已淡化':'淡化');dirty=true;render();});
  const chartTabs=Array.from(document.querySelectorAll('[data-chart]'));
@@ -101,6 +102,14 @@
   lastAmounts={model:m,values};
   put('particleSummary','代表粒子：水 '+view.particles.filter(p=>p.type==='water').length+' · 鹽 '+view.particles.filter(p=>p.type==='salt').length);
  }
+ function renderExchange(){
+  const q=playback.exchangeWindow.summary(),type=$('exchangeSpecies').value,f=q[type];
+  put('exchangeRange','模型時間 '+fmt(q.from)+'–'+fmt(q.to)+' · '+(q.duration<q.window-1e-8?'觀察中':'最近 1 單位時間'));
+  put('exchangeIn',fmt(f.in));put('exchangeOut',fmt(f.out));put('exchangeNet',(Math.abs(f.net)<.005?'':f.net>0?'+':'−')+fmt(Math.abs(f.net)));
+  const max=Math.max(f.in,f.out,1e-12);$('exchangeInBar').style.width=(100*f.in/max)+'%';$('exchangeOutBar').style.width=(100*f.out/max)+'%';
+  const message=q.duration===0?'開始後，觀察同一段時間內進與出的總量。':f.in+f.out<1e-10?'這段時間沒有自然跨膜交換；區室內仍可隨機運動。':Math.abs(f.net)<1e-8&&f.in>1e-10&&f.out>1e-10?'這段時間流入約等於流出；雙向交換仍在進行。':Math.abs(f.net)<.005?'此窗淨變化小於 0.01 模型單位；請繼續觀察。':names[type]+(f.net>0?'淨流入細胞':'淨流出細胞')+'：'+(f.net>0?'流入量大於流出量。':'流出量大於流入量。');
+  put('exchangeMeaning',message);$('exchangeCard').dataset.direction=Math.abs(f.net)<.005?'balanced':f.net>0?'in':'out';
+ }
  function render(){
   dirty=false;const m=lab.model,s=m.snapshot(),f=m.flux(),status=m.status();
   $('initialFields').disabled=lab.locked;$('preset').disabled=lab.locked;$('mode').disabled=lab.locked;
@@ -116,7 +125,7 @@
   $('waterState').textContent='水：'+states[status.water];$('saltState').textContent='鹽：'+states[status.salt];
   $('limitBanner').hidden=!m.limit;if(m.limit)$('limitBanner').textContent='超出模型範圍：已到達'+(m.limit.edge==='upper'?'膨脹上限':'縮小下限')+'（細胞體積 '+fmt(f.geometry.cell)+'）。已停止演算；這不是平衡，也不表示真實細胞會在此尺寸停止。請重設或建立新實驗。';
   $('explanation').textContent=status.system==='near'?'巨觀狀態接近穩定，可通透物質仍持續雙向交換，來源比例仍可能改變。':status.system==='blocked'?'兩種物質均無自然跨膜交換。區室內仍有隨機運動；不可通不等於動態平衡。':status.system==='limit'?'模型已在安全邊界停止，不能把尺寸上限當作生理平衡。':status.system==='ready'?'先設定條件，再按開始。全系統的水、鹽與各來源總量在實驗中固定。':'觀察淨流入與淨流出如何改變庫存；水、鹽會分別判定是否接近平衡。';
-  renderAmounts(m,s);
+  renderAmounts(m,s);renderExchange();
   for(const [id,value]of Object.entries({wi:s.water[0],wo:s.water[1],wt:s.water[0]+s.water[1],si:s.salt[0],so:s.salt[1],st:s.salt[0]+s.salt[1],ci:s.cs[0],co:s.cs[1]}))$(id).textContent=fmt(value,id==='ci'||id==='co'?4:2);
   $('fluxRows').innerHTML=['water','salt'].map(t=>'<tr><th>'+names[t]+'</th><td>'+fmt(f[t].in,4)+'</td><td>'+fmt(f[t].out,4)+'</td><td>'+fmt(f[t].net,4)+'</td></tr>').join('');
   $('originRows').innerHTML=['water','salt'].flatMap(t=>['inside','outside'].map(side=>'<tr><th>'+names[t]+' · '+(side==='inside'?'細胞內':'細胞外')+'</th><td>'+pct(s.origins[t][side][0])+'</td><td>'+pct(s.origins[t][side][1])+'</td></tr>')).join('');
@@ -127,7 +136,7 @@
   const kind=$('chartKind').value;$('chartSpecies').disabled=!['flux','origins'].includes(kind);$('chartSide').disabled=kind!=='origins';$('speciesOption').hidden=$('chartSpecies').disabled;$('sideOption').hidden=$('chartSide').disabled;
   for(const tab of chartTabs){const active=tab.dataset.chart===kind;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;}$('chartPanel').setAttribute('aria-labelledby','tab-'+kind);
   const visual=view.audit(m);visualLag=Object.values(visual).some(g=>Math.abs(g.shownInside-g.modelInside)>3*g.weight);$('visualNote').classList.toggle('is-lagging',visualLag);
-  put('visualNote',playback.pendingClose?'先補完已計算的'+names[playback.pendingClose.type]+'交換，再關閉通道；模型時間暫停。':playback.settling?'正在補完先前已計算的交換；時間、庫存與圖表不再推進。':visualLag?'動畫正在追上已計算的量值；可暫停以完成呈現。':'顏色記錄原始來源。粒子有取樣誤差，精確量值見數據區。');
+  put('visualNote',playback.pendingClose?'先補完已計算的'+names[playback.pendingClose.type]+'交換，再關閉通道；模型時間暫停。':playback.settling?'正在補完先前已計算的交換；時間、庫存與圖表不再推進。':visualLag?'動畫正在追上已計算的量值；可暫停以完成呈現。':'兩側粒子都隨機運動，並非朝鹽直走；顏色只記錄原始來源。');
   const rect=fitCanvas($('simulationCanvas'),720,440);view.draw(sim,m,{water:$('showWater').checked,salt:$('showSalt').checked,fadeWater:$('fadeWater').getAttribute('aria-pressed')==='true',fadeSalt:$('fadeSalt').getAttribute('aria-pressed')==='true',displayScale:Math.max(1,720/Math.max(1,rect.width))});drawChart();
  }
  function frame(now){
@@ -140,8 +149,8 @@
   requestAnimationFrame(frame);
  }
  // Read-only observability for local validation, without a second scientific engine.
- Object.defineProperty(window,'osmosisLab',{value:Object.freeze({snapshot:()=>lab.model.snapshot(),status:()=>lab.model.status(),events:()=>lab.model.events.map(e=>({...e})),
-  diagnostics:()=>({running:lab.running,locked:lab.locked,mode:lab.mode,temperature:view.temperature,motionScale:view.motionScale,particlePositions:view.particles.map(p=>({id:p.id,x:p.x,y:p.y,side:p.side,type:p.type,source:p.source,color:p.color})),particleCount:view.particles.length,visualCrossings:view.records.length,naturalCrossings:{water:view.records.filter(r=>r.kind==='natural'&&r.type==='water').length,salt:view.records.filter(r=>r.kind==='natural'&&r.type==='salt').length},manualCrossings:view.records.filter(r=>r.kind==='manual').length,permeable:{...lab.model.permeable},limit:lab.model.limit,audit:lab.model.audit(),visual:view.audit(lab.model),visualLag,chartSelection,settling:playback.settling,pendingClose:playback.pendingClose?{...playback.pendingClose}:null,maximumMarkerError:view.maximumMarkerError(lab.model),radius:view.radius,targetRadius:view.cellRadius(lab.model)})})});
+ Object.defineProperty(window,'osmosisLab',{value:Object.freeze({snapshot:()=>lab.model.snapshot(),exchangeSummary:()=>playback.exchangeWindow.summary(),status:()=>lab.model.status(),events:()=>lab.model.events.map(e=>({...e})),
+  diagnostics:()=>({running:lab.running,locked:lab.locked,mode:lab.mode,playbackSpeed:speed,modelTimeScale:playback.modelTimeScale,temperature:view.temperature,motionScale:view.motionScale,particlePositions:view.particles.map(p=>({id:p.id,x:p.x,y:p.y,side:p.side,type:p.type,source:p.source,color:p.color})),particleCount:view.particles.length,visualCrossings:view.records.length,naturalCrossings:{water:view.records.filter(r=>r.kind==='natural'&&r.type==='water').length,salt:view.records.filter(r=>r.kind==='natural'&&r.type==='salt').length},manualCrossings:view.records.filter(r=>r.kind==='manual').length,permeable:{...lab.model.permeable},limit:lab.model.limit,audit:lab.model.audit(),visual:view.audit(lab.model),visualLag,chartSelection,settling:playback.settling,pendingClose:playback.pendingClose?{...playback.pendingClose}:null,maximumMarkerError:view.maximumMarkerError(lab.model),radius:view.radius,targetRadius:view.cellRadius(lab.model)})})});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){playback.pause();lastFrame=null;dirty=true;render();}});
  window.addEventListener('resize',()=>{dirty=true;});
  const resizeObserver=new ResizeObserver(()=>{dirty=true;});resizeObserver.observe($('simulationCanvas'));resizeObserver.observe($('trendCanvas'));

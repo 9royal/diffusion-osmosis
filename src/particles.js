@@ -25,7 +25,7 @@
      for(let n=0;n<count;n++) {
       const side=n<nInside?'inside':'outside',angle=this.random()*2*Math.PI;
       const distance=side==='inside'?Math.sqrt(this.random())*(this.radius-7):this.radius+7+this.random()*(edgeDistance(angle)-this.radius-7);
-      const p={id:this.particles.length,side,x:CX+distance*Math.cos(angle),y:CY+distance*Math.sin(angle),transition:null,heading:this.random()*2*Math.PI};
+      const p={id:this.particles.length,side,x:CX+distance*Math.cos(angle),y:CY+distance*Math.sin(angle),transition:null,replayRest:0,heading:this.random()*2*Math.PI};
       Object.defineProperties(p,{type:{value:type,enumerable:true},source:{value:source,enumerable:true},color:{value:COLORS[type][source],enumerable:true},weight:{value:weight,enumerable:true}});
       group.particles.push(p);this.particles.push(p);
      }
@@ -94,7 +94,7 @@
     if(kind==='natural'&&!model.permeable[g.type])continue;
     if(g.budget[kind][d]+g.weight*1e-12<g.weight)continue;
     const side=d===0?'outside':'inside';
-    const candidates=g.particles.filter(p=>p.side===side&&!p.transition).sort((a,b)=>Math.abs(radial(a)-this.radius)-Math.abs(radial(b)-this.radius));
+    const candidates=g.particles.filter(p=>p.side===side&&!p.transition&&(kind==='manual'||p.replayRest<=0)).sort((a,b)=>Math.abs(radial(a)-this.radius)-Math.abs(radial(b)-this.radius));
     const backlog=g.budget[kind][d]/g.weight,available=candidates.length;
     for(let n=0;n<available&&g.budget[kind][d]+g.weight*1e-12>=g.weight;n++){
      const p=candidates[n];g.budget[kind][d]=Math.max(0,g.budget[kind][d]-g.weight);
@@ -104,6 +104,8 @@
    }
   }
   _advance(model,dt,walk) {
+   // A representative marker rests between natural replays; the scientific ledger is unchanged.
+   for(const p of this.particles)p.replayRest=Math.max(0,p.replayRest-dt);
    this._schedule(model);
    let changed=false;
    for(const p of this.particles) {
@@ -117,7 +119,10 @@
       this.records.push({time:model.time,id:p.id,type:p.type,source:p.source,color:p.color,direction:tr.direction,kind:tr.kind,amount:p.weight});
      }
      p.x=CX+(this.radius+tr.offset)*Math.cos(tr.angle);p.y=CY+(this.radius+tr.offset)*Math.sin(tr.angle);
-     if(progress>=1){p.transition=null;this._confine(p,this.radius);}
+     if(progress>=1){p.transition=null;p.replayRest=1;
+      // Continue into the receiving compartment with a randomized exit angle. This is drawing continuity, not molecular intent.
+      p.heading=tr.angle+(tr.direction===0?Math.PI:0)+(this.random()-.5)*Math.PI*.7;
+      this._confine(p,this.radius);}
     } else if(walk) {
      this._walk(p,dt);changed=dt>0||changed;
     }
